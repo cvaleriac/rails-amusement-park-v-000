@@ -1,12 +1,11 @@
 class AttractionsController < ApplicationController
-  before_action :authorize, except: [:edit, :update]
-  before_action :authorize_admin, only: [:edit, :update]
   def index
     @attractions = Attraction.all
   end
 
   def show
-    @attraction = Attraction.find(params[:id])
+    @attraction = Attraction.find_by(id: params[:id])
+    @ride = @attraction.rides.build(user_id:current_user.id)
   end
 
   def new
@@ -14,36 +13,29 @@ class AttractionsController < ApplicationController
   end
 
   def create
-    @attraction = Attraction.new(all_attraction_params)
-    if @attraction.save
-      flash[:message] = "#{@attraction.name} successfully created"
-      redirect_to attraction_path(@attraction)
-    else
-      flash[:message] = "There were problems creating your attraction."
-      render "new"
-    end
+    attraction = Attraction.create(attraction_params)
+    redirect_to attraction_path(attraction)
   end
 
   def edit
-    @attraction = Attraction.find(params[:id])
+    @attraction = Attraction.find_by(id: params[:id])
+    @ride = @attraction.rides.build(user_id:current_user.id)
   end
 
   def update
-    @attraction = Attraction.find(params[:id])
-    if @attraction.update(all_attraction_params)
-      flash[:message] = "#{@attraction.name} was successfully updated."
-      redirect_to attraction_path(@attraction)
-    else
-      flash[:alert] = "There were problems updating this attraction."
-      render "edit"
-    end
+    attraction = Attraction.find_by(id: params[:id])
+    attraction.update(attraction_params)
+    redirect_to attraction_path(attraction)
   end
 
   private
-  def all_attraction_params
-    attraction_params(:name, :tickets, :nausea_rating, :happiness_rating, :min_height)
-  end
-  def attraction_params(*args)
-    params.require(:attraction).permit(*args)
+  def attraction_params
+    params.require(:attraction).permit(
+        :name,
+        :min_height,
+        :tickets,
+        :happiness_rating,
+        :nausea_rating
+      )
   end
 end

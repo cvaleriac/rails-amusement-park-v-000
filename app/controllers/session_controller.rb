@@ -1,36 +1,20 @@
 class SessionController < ApplicationController
-  def login
-      @users = User.all
+  skip_before_action :verify_user_is_authenticated, only: [:new,:create]
+  def new
+    @user = User.new
+  end
+
+  def create
+    if @user = User.find_by(name:params[:user][:name])
+      session[:user_id] = @user.id
+      redirect_to user_path(@user)
+    else
+      render 'new'
     end
+  end
 
-    def create
-      if (user = User.find_by(user_params(:id)))
-        if user.authenticate(params[:user][:password])
-          session[:user_id] = user.id
-          flash[:message] = "Welcome, #{user.name}"
-          redirect_to user_path(user)
-        else
-          flash[:message] = "Improper Credentials Entered"
-          @users = User.all
-          render 'login'
-        end
-      else
-        flash[:message] = "User not found"
-        @users = User.all
-        render 'login'
-      end
-    end
-
-    def logout
-      session.delete :user_id
-      redirect_to root_path
-    end
-
-
-    private
-
-    def user_params(*args)
-      params.require(:user).permit(*args)
-    end
-
+  def destroy
+    session.delete("user_id")
+    redirect_to root_path
+  end
 end

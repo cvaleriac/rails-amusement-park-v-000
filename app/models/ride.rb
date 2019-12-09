@@ -3,38 +3,47 @@ class Ride < ActiveRecord::Base
   belongs_to :attraction
 
   def take_ride
-        raise Exceptions::RideError.new("Sorry. You do not have enough tickets to ride the #{self.attraction.name}. You are not tall enough to ride the #{self.attraction.name}.") if too_short and too_poor
-        raise Exceptions::NotTallEnoughError.new(self.attraction.name) if too_short
-        raise Exceptions::NotEnoughTicketsError.new(self.attraction.name) if too_poor
-        deduct_tickets
-        update_happiness
-        update_nausea
+    user_has_enough_tickets, user_is_tall_enough = check_if_user_meets_the_requirements
+    if user_has_enough_tickets && user_is_tall_enough
+      start_ride
+    elsif user_is_tall_enough && !user_has_enough_tickets
+      "Sorry. " + not_enough_tickets
+    elsif user_has_enough_tickets && !user_is_tall_enough
+      "Sorry. " + not_tall_enough
+    else
+      "Sorry. " + not_enough_tickets + " " + not_tall_enough
     end
+  end
 
-
-    private
-    def too_short
-        self.user.height < self.attraction.min_height
+  def check_if_user_meets_the_requirements
+    user_has_enough_tickets, user_is_tall_enough = false
+    if self.user.tickets >= self.attraction.tickets
+      user_has_enough_tickets = true
     end
-
-    def too_poor
-        self.user.tickets < self.attraction.tickets
+    if self.user.height >= self.attraction.min_height
+      user_is_tall_enough = true
     end
-    def deduct_tickets
-        update_user(:tickets, -1 * self.attraction.tickets)
-    end
+    return [user_has_enough_tickets, user_is_tall_enough]
+  end
 
-    def update_happiness
-        update_user(:happiness, self.attraction.happiness_rating)
-    end
+  def start_ride
+    new_happiness = self.user.happiness + self.attraction.happiness_rating
+    new_nausea = self.user.nausea + self.attraction.nausea_rating
+    new_tickes_count =  self.user.tickets - self.attraction.tickets
+    self.user.update(
+      :happiness => new_happiness,
+      :nausea => new_nausea,
+      :tickets => new_tickes_count
+    )
+    "Thanks for riding the #{self.attraction.name}!"
+  end
 
-    def update_nausea
-        update_user(:nausea, self.attraction.nausea_rating)
-    end
+  def not_enough_tickets
+    "You do not have enough tickets to ride the #{self.attraction.name}."
+  end
 
-    def update_user(attribute, value)
-        self.user.update(attribute => (self.user.send(attribute) + value))
-    end
-
+  def not_tall_enough
+    "You are not tall enough to ride the #{self.attraction.name}."
+  end
 
 end
